@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useStore } from "@/store";
 import { api, errorMessage, type Job, type Settings } from "@/lib/api";
 import { usd, when } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/ui/alert-dialog";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { StatusBadge } from "@/ui/status-badge";
@@ -17,12 +27,14 @@ function Stat({
   value,
   sub,
   accent,
+  action,
   children,
 }: {
   label: string;
   value: string;
   sub: string;
   accent?: boolean;
+  action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
@@ -32,7 +44,10 @@ function Stat({
         accent && "shadow-[inset_0_0_0_1px_var(--accent-a30)]",
       )}
     >
-      <div className="text-[11px] tracking-[.06em] text-text-2 uppercase">{label}</div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] tracking-[.06em] text-text-2 uppercase">{label}</div>
+        {action}
+      </div>
       {children ?? (
         <div
           className={cn("mt-1.5 font-display text-[22px] font-bold tabular-nums", accent && "text-accent")}
@@ -82,6 +97,131 @@ function MoneyInput({
         onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ""))}
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        className="pl-6 tabular-nums"
+      />
+    </div>
+  );
+}
+
+/**
+ * Starting balance is read-only by default. Changing it resets the date spending is counted
+ * from, so it goes through an explicit Edit button and a confirmation dialog.
+ */
+function BalanceStat({
+  value,
+  setAt,
+  onSave,
+}: {
+  value: number | null;
+  setAt: string | null;
+  onSave: (v: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setDraft(value != null ? String(value) : "");
+    setOpen(true);
+  };
+  const parsed = Number(draft);
+  const valid = draft.trim() !== "" && Number.isFinite(parsed) && parsed >= 0;
+  const changed = valid && parsed !== value;
+
+  const save = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!changed) return;
+    setSaving(true);
+    try {
+      await onSave(String(parsed));
+      toast.success(`Starting balance set to ${usd(parsed)}`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Stat
+      label="Starting balance"
+      value=""
+      action={
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={start}
+          aria-label="Edit starting balance"
+          className="-my-1"
+        >
+          <Pencil />
+          {value != null ? "Edit" : "Set"}
+        </Button>
+      }
+      sub={value != null && setAt ? `You set this · ${when(setAt)}` : "You set this"}
+    >
+      <div className="mt-1.5 font-display text-[22px] font-bold tabular-nums">
+        {value != null ? usd(value) : <span className="text-text-3">Not set</span>}
+      </div>
+      <AlertDialog open={open} onOpenChange={(o) => !saving && setOpen(o)}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {value != null ? "Change starting balance?" : "Set starting balance"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter the balance shown in your Higgsfield Console right now. Spending is counted from today, so
+              earlier jobs no longer count against it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <MoneyField
+            id="start-balance"
+            label="Starting balance in dollars"
+            value={draft}
+            onChange={setDraft}
+          />
+          {value != null && changed && (
+            <div className="text-xs text-text-2">
+              {usd(value)} → {usd(parsed)}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={save} disabled={!changed || saving}>
+              {saving && <Loader2 className="animate-spin" />}
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Stat>
+  );
+}
+
+function MoneyField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-2">$</span>
+      <Input
+        id={id}
+        autoFocus
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
         className="pl-6 tabular-nums"
       />
     </div>
@@ -154,15 +294,11 @@ export function SpendingCard() {
       </div>
       {syncError && <div className="rounded-lg bg-fill-1 px-3 py-2 text-xs text-text-2">{syncError}</div>}
       <div className="grid grid-cols-4 gap-3">
-        <Stat label="Starting balance" value="" sub="You set this · edit">
-          <MoneyInput
-            id="start-balance"
-            label="Starting balance in dollars"
-            value={s?.starting_balance_usd != null ? String(s.starting_balance_usd) : ""}
-            onSave={(v) => set("starting_balance_usd", v)}
-            className="mt-1.5 [&_input]:h-9 [&_input]:font-display [&_input]:text-lg [&_input]:font-bold"
-          />
-        </Stat>
+        <BalanceStat
+          value={s?.starting_balance_usd ?? null}
+          setAt={s?.balance_set_at ?? null}
+          onSave={(v) => set("starting_balance_usd", v)}
+        />
         <Stat label="Spent (Higgsfield usage)" value={usd(s?.usage_spent_usd)} sub={syncedAt} />
         <Stat
           label="Spent (local log)"
