@@ -14,19 +14,31 @@ export function KeyCard() {
   const key = useStore((s) => s.key);
   const refreshKey = useStore((s) => s.refreshKey);
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState("");
+  const [keyId, setKeyId] = useState("");
+  const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Pasting a full "KEY_ID:KEY_SECRET" into the ID field fills both fields.
+  const onKeyIdChange = (v: string) => {
+    const i = v.indexOf(":");
+    if (i === -1) return setKeyId(v);
+    setKeyId(v.slice(0, i).trim());
+    setSecret(v.slice(i + 1).trim());
+  };
+
+  const canSave = keyId.trim() !== "" && secret.trim() !== "";
+
   const save = async () => {
-    const v = value;
-    setValue(""); // don't keep the secret in UI state
-    if (!v.trim()) return;
+    const v = `${keyId.trim()}:${secret.trim()}`;
+    setSecret(""); // don't keep the secret in UI state
+    if (!canSave) return;
     setBusy(true);
     try {
       const r = await api.keySet(v);
       if (r.ok) {
         toast.success(r.message);
         setEditing(false);
+        setKeyId("");
         await refreshKey();
       } else {
         toast.error(`${r.message} The key was not saved.`);
@@ -66,29 +78,48 @@ export function KeyCard() {
       )}
       {showInput && (
         <form
-          className="flex gap-2"
+          className="flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <label htmlFor="hf-key" className="sr-only">
-            Higgsfield API key
-          </label>
-          <Input
-            id="hf-key"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="KEY_ID:KEY_SECRET"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className="h-10 font-mono"
-            autoFocus={editing}
-          />
-          <Button type="submit" variant="inverse" size="lg" disabled={busy || !value.trim()}>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="hf-key-id" className="text-xs text-text-2">
+                Key ID
+              </label>
+              <Input
+                id="hf-key-id"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="KEY_ID"
+                value={keyId}
+                onChange={(e) => onKeyIdChange(e.target.value)}
+                className="h-10 font-mono"
+                autoFocus={editing}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="hf-key-secret" className="text-xs text-text-2">
+                Key secret
+              </label>
+              <Input
+                id="hf-key-secret"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="KEY_SECRET"
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                className="h-10 font-mono"
+              />
+            </div>
+          </div>
+          <Button type="submit" variant="inverse" size="lg" className="self-end" disabled={busy || !canSave}>
             {busy ? <Loader2 className="animate-spin" /> : null}
-            Save & test
+            {busy ? "Connecting…" : "Connect"}
           </Button>
         </form>
       )}

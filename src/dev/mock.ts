@@ -206,6 +206,10 @@ const settings: Record<string, string> = {
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   key_status: () => ({ present: true, hint: "••••a1b2", anthropic_present: false }),
   key_test: () => ({ ok: true, message: "Key works." }),
+  key_set: ({ value }) =>
+    /^[^:\s]+:\S+$/.test(String(value))
+      ? { ok: true, message: "Key accepted by Higgsfield." }
+      : { ok: false, message: "Higgsfield rejected this key (401)." },
   models_list: () => registry,
   projects_list: () => projects,
   jobs_list: () => jobs,
