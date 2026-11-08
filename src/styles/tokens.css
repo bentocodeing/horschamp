@@ -1,0 +1,234 @@
+/* Design tokens. See docs/DESIGN_SYSTEM.md. Swap the accent by editing --accent* only. */
+:root {
+  color-scheme: dark;
+
+  /* ---- Surfaces ---- */
+  --bg-app: #0f1113;
+  --bg-panel: #131517;
+  --bg-surface: #1c1e21;
+  --bg-surface-2: #23262a;
+  --bg-surface-3: #2a2d32;
+  --bg-elevated: linear-gradient(180deg, #2a2e34 0%, #18191c 100%);
+  --bg-glass: rgba(35, 38, 42, 0.75);
+  --bg-glass-sheen:
+    linear-gradient(149deg, #ffffff0a 22%, #ffffff0f 51%, #ffffff05 80%), rgba(35, 38, 42, 0.75);
+  --fill-1: rgba(255, 255, 255, 0.05); /* default control fill / hover wash */
+  --fill-2: rgba(255, 255, 255, 0.1);
+  --fill-3: rgba(255, 255, 255, 0.2);
+  --scrim: rgba(0, 0, 0, 0.8);
+  --media-scrim: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.72) 100%);
+
+  /* ---- Borders ---- */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --border-control: rgba(217, 217, 217, 0.04);
+  --rim: inset 0 0 0 1px var(--border-subtle);
+  --rim-strong: inset 0 0 0 1px var(--border-strong);
+
+  /* ---- Text ---- */
+  --text-1: #f7f7f8;
+  --text-2: #898a8b;
+  --text-3: #626262;
+  --text-disabled: #484e56;
+  --text-on-media-2: rgba(255, 255, 255, 0.5);
+  --text-inverse: #14151a;
+
+  /* ---- Accent (swap here) ---- */
+  --accent: #c6ff3d;
+  --accent-hi: #e2ff8a;
+  --accent-600: #a6db2a;
+  --accent-a10: rgba(198, 255, 61, 0.1);
+  --accent-a15: rgba(198, 255, 61, 0.15);
+  --accent-a30: rgba(198, 255, 61, 0.3);
+  --accent-a48: rgba(198, 255, 61, 0.48);
+  --accent-gradient: radial-gradient(in oklab, var(--accent-hi) 40%, var(--accent) 100%);
+  --accent-2: #ffb547; /* secondary highlight: badges, "new" tags */
+  --accent-2-a15: rgba(255, 181, 71, 0.15);
+
+  /* ---- Semantic ---- */
+  --success: #2eb844;
+  --warning: #dfab01;
+  --danger: #fa0019;
+  --info: #5b91fe;
+  --purple: #8271f8;
+  --cyan: #9ce6f3;
+
+  /* ---- Typography ---- */
+  --font-ui: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: "Space Grotesk", "Inter Variable", "Inter", ui-sans-serif, sans-serif;
+  --font-code: "JetBrains Mono", "Space Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --fs-10: 0.625rem;
+  --lh-10: 0.875rem;
+  --fs-12: 0.75rem;
+  --lh-12: 1rem;
+  --fs-14: 0.875rem;
+  --lh-14: 1.25rem;
+  --fs-16: 1rem;
+  --lh-16: 1.5rem;
+  --fs-18: 1.125rem;
+  --lh-18: 1.75rem;
+  --fs-20: 1.25rem;
+  --lh-20: 1.75rem;
+  --fs-24: 1.5rem;
+  --lh-24: 1.875rem;
+  --fs-28: 1.75rem;
+  --lh-28: 2.25rem;
+  --fs-40: 2.5rem;
+  --lh-40: 3rem;
+  --fs-64: 4rem;
+  --lh-64: 4.5rem;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --tracking-tight: -0.01em;
+  --tracking-heading: -0.02em;
+  --tracking-caps: -0.04em; /* uppercase Space Grotesk labels/headings */
+
+  /* ---- Spacing (4px base) ---- */
+  --sp-0: 0;
+  --sp-0-5: 2px;
+  --sp-1: 4px;
+  --sp-1-5: 6px;
+  --sp-2: 8px;
+  --sp-2-5: 10px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* ---- Radii ---- */
+  --r-xs: 4px;
+  --r-chip: 6px;
+  --r-sm: 8px;
+  --r-control: 10px;
+  --r-md: 12px;
+  --r-surface: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-full: 9999px;
+
+  /* ---- Shadows ---- */
+  --sh-sheen: inset 0 2px 3px rgba(255, 255, 255, 0.05);
+  --sh-raised-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --sh-raised: inset 0 2px 3px rgba(255, 255, 255, 0.05), 0 4px 24px -8px rgba(0, 0, 0, 0.15);
+  --sh-popover: inset 0 2px 3px rgba(255, 255, 255, 0.05), 0 12px 40px -8px rgba(0, 0, 0, 0.5);
+  --sh-modal: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 24px 64px rgba(0, 0, 0, 0.55);
+  --sh-btn-lip: inset 0 -3px 0 rgba(0, 0, 0, 0.43);
+  --sh-float: 10px 34px 24px rgba(0, 0, 0, 0.15), 3px 7px 5px rgba(0, 0, 0, 0.25);
+  --ring-focus: 0 0 0 2px var(--accent-a48);
+  --glow-accent: 0 0 40px -6px var(--accent-a30);
+
+  /* ---- Blur ---- */
+  --blur-xs: 4.5px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 24px;
+  --blur-xl: 40px;
+
+  /* ---- Motion ---- */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-media: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --dur-fast: 100ms;
+  --dur-normal: 200ms;
+  --dur-slow: 300ms;
+  --dur-slower: 500ms;
+  --dur-shimmer: 2s;
+  --dur-sweep: 1.5s;
+
+  /* ---- Layout ---- */
+  --nav-h: 48px;
+  --sidebar-w: 318px;
+  --sidebar-inner-w: 302px;
+  --control-h: 32px;
+  --control-h-sm: 24px;
+  --button-h-lg: 48px;
+  --grid-gap: 12px;
+  --prompt-bar-max-w: 720px;
+}
+
+/* Reference keyframes */
+@keyframes tile-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes text-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes fade-in-up-sm {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes dot-cycle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  75% {
+    opacity: 0.6;
+  }
+}
+@keyframes sweep-skew {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+  28%,
+  100% {
+    transform: translateX(350%) skewX(-20deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

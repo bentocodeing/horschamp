@@ -1,0 +1,183 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "./tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Map our design tokens onto shadcn's semantic variables and Tailwind's theme. */
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-heading);
+  --font-mono: var(--font-code);
+
+  --color-background: var(--bg-app);
+  --color-foreground: var(--text-1);
+  --color-card: var(--bg-surface);
+  --color-card-foreground: var(--text-1);
+  --color-popover: var(--bg-surface-2);
+  --color-popover-foreground: var(--text-1);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--text-inverse);
+  --color-secondary: var(--fill-2);
+  --color-secondary-foreground: var(--text-1);
+  --color-muted: var(--fill-1);
+  --color-muted-foreground: var(--text-2);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--text-inverse);
+  --color-destructive: var(--danger);
+  --color-border: var(--border-default);
+  --color-input: var(--border-default);
+  --color-ring: var(--accent-a48);
+
+  --color-app: var(--bg-app);
+  --color-panel: var(--bg-panel);
+  --color-surface: var(--bg-surface);
+  --color-surface-2: var(--bg-surface-2);
+  --color-surface-3: var(--bg-surface-3);
+  --color-fill-1: var(--fill-1);
+  --color-fill-2: var(--fill-2);
+  --color-fill-3: var(--fill-3);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--border-strong);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-control);
+  --radius-lg: var(--r-md);
+  --radius-xl: var(--r-surface);
+  --radius-2xl: var(--r-lg);
+  --radius-3xl: var(--r-xl);
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-shimmer: bg-shimmer 2s linear infinite;
+  @keyframes bg-shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--fs-14);
+    line-height: var(--lh-14);
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  ::selection {
+    background: var(--accent-a30);
+  }
+  :focus-visible {
+    outline: none;
+  }
+  /* Text fields are skipped: bare ones sit inside a bordered container,
+     and the Input / Textarea primitives draw their own ring. */
+  :focus-visible:not(
+    textarea,
+    [contenteditable],
+    input:not([type]),
+    input[type="text"],
+    input[type="search"]
+  ) {
+    box-shadow: var(--ring-focus);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--fill-2);
+    border-radius: 10px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .heading {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
+  .eyebrow {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: var(--fs-10);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .glass {
+    background: var(--bg-glass-sheen);
+    backdrop-filter: blur(var(--blur-md)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--blur-md)) saturate(140%);
+    box-shadow:
+      var(--sh-popover),
+      inset 0 0 0 1px var(--border-default);
+  }
+  .shimmer {
+    background: linear-gradient(
+      110deg,
+      var(--bg-surface) 30%,
+      var(--bg-surface-3) 50%,
+      var(--bg-surface) 70%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .shimmer {
+    animation: none;
+  }
+}

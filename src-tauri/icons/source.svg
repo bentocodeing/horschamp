@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- App icon: same as the sidebar logo. Black pixel arrow (PxLogoArrow in src/ui/pixel-icon.tsx) on the accent. -->
+  <!-- macOS icon grid: 824px rounded square centered on a 1024px canvas. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#c6ff3d"/>
+  <!-- PxLogoArrow path, 4x4 cells, scaled so the arrow is 46% of the square, as in the sidebar -->
+  <path transform="translate(324 324) scale(94)" fill="#000000" d="M1 0.28Q1 0 1.28 0L3.72 0Q4 0 4 0.28L4 2.72Q4 3 3.72 3L3.28 3Q3 3 3 2.72L3 2.28Q3 2 2.72 2L2 2L2 1.28Q2 1 1.72 1L1.28 1Q1 1 1 0.72ZM2 2L2 2.72Q2 3 1.72 3L1 3L1 2.28Q1 2 1.28 2ZM1 3L1 3.72Q1 4 0.72 4L0.28 4Q0 4 0 3.72L0 3.28Q0 3 0.28 3Z"/>
+</svg>
