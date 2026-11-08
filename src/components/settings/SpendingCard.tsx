@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { Loader2, Pencil, RefreshCw } from "lucide-react";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { Download, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useStore } from "@/store";
 import { api, errorMessage, type Job, type Settings } from "@/lib/api";
@@ -272,6 +272,25 @@ export function SpendingCard() {
     }
   };
 
+  const exportCsv = async () => {
+    const day = new Date().toISOString().slice(0, 10);
+    const path = await save({
+      defaultPath: `horschamp-spending-${day}.csv`,
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+    });
+    if (!path) return;
+    try {
+      const n = await api.spendingExportCsv(path);
+      toast.success(`Exported ${n} job${n === 1 ? "" : "s"} to CSV`, {
+        action: { label: "Show", onClick: () => void api.revealPath(path) },
+      });
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  };
+
+  const showBackups = () => api.backupsReveal().catch((e) => toast.error(errorMessage(e)));
+
   const pickFolder = async () => {
     const dir = await open({ directory: true, defaultPath: settings.library_dir });
     if (typeof dir === "string") {
@@ -287,10 +306,16 @@ export function SpendingCard() {
     <Card className="col-span-2 gap-3.5">
       <div className="flex items-center justify-between">
         <SectionTitle>Spending</SectionTitle>
-        <Button onClick={sync} disabled={syncing}>
-          {syncing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-          Sync from Higgsfield usage
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={exportCsv}>
+            <Download />
+            Export CSV
+          </Button>
+          <Button onClick={sync} disabled={syncing}>
+            {syncing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            Sync from Higgsfield usage
+          </Button>
+        </div>
       </div>
       {syncError && <div className="rounded-lg bg-fill-1 px-3 py-2 text-xs text-text-2">{syncError}</div>}
       <div className="grid grid-cols-4 gap-3">
@@ -342,6 +367,12 @@ export function SpendingCard() {
           Director via Anthropic API: {usd(s.director_spent_usd)} (billed by Anthropic, not Higgsfield)
         </div>
       )}
+      <div className="flex items-center gap-2 text-xs text-text-2">
+        <span>Job history and spending are backed up once a day; the last 7 days are kept.</span>
+        <Button size="xs" variant="ghost" onClick={showBackups}>
+          Show backups
+        </Button>
+      </div>
       <SpendTable jobs={jobs} />
     </Card>
   );

@@ -1,7 +1,9 @@
+pub mod backup;
 pub mod commands;
 pub mod db;
 pub mod director;
 pub mod error;
+pub mod export;
 pub mod hf;
 pub mod jobs;
 pub mod media;
@@ -96,6 +98,17 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let db = Arc::new(db::Db::open(&data_dir.join("studio.db"))?);
+    // A failed backup must not stop the app from starting.
+    match backup::daily(
+        &db,
+        &data_dir.join("backups"),
+        chrono::Local::now().date_naive(),
+        backup::KEEP_DAYS,
+    ) {
+        Ok(Some(p)) => log::info!("database backed up to {}", p.display()),
+        Ok(None) => {}
+        Err(e) => log::warn!("database backup failed: {e}"),
+    }
     let secrets: Arc<dyn secrets::SecretStore> = Arc::new(secrets::KeyringStore);
     let events = Arc::new(TauriEvents(handle.clone()));
 
@@ -187,6 +200,8 @@ pub fn run() {
             commands::settings_set,
             commands::spending_summary,
             commands::usage_sync,
+            commands::spending_export_csv,
+            commands::backups_reveal,
             commands::director_status,
             commands::director_prompt_open,
             commands::director_prompt_reset,

@@ -251,6 +251,13 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
     ffmpegInstalled = true;
     return { available: true, path: FFMPEG_PATH };
   },
+  spending_export_csv: () => jobs.length,
+  backups_reveal: () => undefined,
+  // Only the CSV export gets a fake path; other save dialogs act as canceled.
+  "plugin:dialog|save": ({ options }) => {
+    const name = (options as { defaultPath?: string } | undefined)?.defaultPath ?? "";
+    return name.endsWith(".csv") ? `/Users/you/Downloads/${name}` : null;
+  },
   "plugin:event|listen": () => 0,
   "plugin:event|unlisten": () => undefined,
 };

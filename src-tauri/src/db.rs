@@ -269,6 +269,15 @@ impl Db {
         Ok(Db(Mutex::new(conn)))
     }
 
+    /// Write a consistent copy of the whole database to `path` (which must not exist).
+    pub fn copy_to(&self, path: &Path) -> AppResult<()> {
+        let p = path
+            .to_str()
+            .ok_or_else(|| AppError::Other("backup path is not valid UTF-8".into()))?;
+        self.c().execute("VACUUM INTO ?1", [p])?;
+        Ok(())
+    }
+
     fn c(&self) -> std::sync::MutexGuard<'_, Connection> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
     }

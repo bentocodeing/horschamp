@@ -7,7 +7,7 @@ use crate::hf::{self, HfClient};
 use crate::jobs::{JobRequest, Quote, SETTING_THRESHOLD};
 use crate::registry::{self, Registry, RegistryDiff};
 use crate::secrets::{self, ANTHROPIC, HIGGSFIELD};
-use crate::{media, AppState};
+use crate::{export, media, AppState};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -344,6 +344,32 @@ pub fn spending_summary(s: S) -> AppResult<Spending> {
         threshold_usd: s.jobs.threshold(),
         director_spent_usd: director,
     })
+}
+
+/// Write every job with its estimate and charged amount to a CSV file the user picked.
+/// Returns the number of jobs written.
+#[tauri::command]
+pub fn spending_export_csv(s: S, out_path: String) -> AppResult<usize> {
+    let out = PathBuf::from(&out_path);
+    if out.extension().and_then(|e| e.to_str()) != Some("csv") {
+        return Err(AppError::Validation("Export file must end in .csv".into()));
+    }
+    let jobs = s.db.jobs(None, i64::MAX)?;
+    let projects: HashMap<String, String> =
+        s.db.projects()?
+            .into_iter()
+            .map(|p| (p.id, p.name))
+            .collect();
+    std::fs::write(&out, export::jobs_csv(&jobs, &projects))?;
+    Ok(jobs.len())
+}
+
+/// Show the folder with the daily database backups in Finder.
+#[tauri::command]
+pub fn backups_reveal(s: S) -> AppResult<()> {
+    let dir = s.data_dir.join("backups");
+    std::fs::create_dir_all(&dir)?;
+    tauri_plugin_opener::reveal_item_in_dir(&dir).map_err(|e| AppError::Other(e.to_string()))
 }
 
 /// Sum `/models/usage` from when the starting balance was set (or the last 30 days) until now,

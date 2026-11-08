@@ -244,6 +244,9 @@ export const api = {
   settingSet: (key: string, value: string) => invoke<void>("settings_set", { key, value }),
   spending: () => invoke<Spending>("spending_summary"),
   usageSync: () => invoke<{ total_usd: number; by_model: Record<string, number> }>("usage_sync"),
+  /** Writes all jobs to a CSV file; returns how many were written. */
+  spendingExportCsv: (outPath: string) => invoke<number>("spending_export_csv", { outPath }),
+  backupsReveal: () => invoke<void>("backups_reveal"),
 
   directorStatus: () => invoke<DirectorStatus>("director_status"),
   directorPromptOpen: () => invoke<void>("director_prompt_open"),
