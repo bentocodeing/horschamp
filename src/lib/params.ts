@@ -26,6 +26,7 @@ export const PRIMARY_PARAMS = [
   "batch_size",
   "num_images",
   "sound",
+  "generate_audio",
 ];
 
 export type ParamGroup = "prompt" | "media" | "primary" | "more";

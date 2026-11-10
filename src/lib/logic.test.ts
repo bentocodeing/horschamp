@@ -24,6 +24,8 @@ describe("params", () => {
     expect(g.image_url).toBe("media");
     expect(g.duration).toBe("primary");
     expect(g.cfg_scale).toBe("more");
+    const seedance = get("bytedance/seedance-2.5/text-to-video");
+    expect(groupOf(seedance.inputs.find((i) => i.name === "generate_audio")!)).toBe("primary");
   });
 
   it("validates like the backend", () => {

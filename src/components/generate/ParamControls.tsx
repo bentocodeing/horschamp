@@ -28,6 +28,7 @@ type SetParam = (name: string, value: unknown) => void;
 function display(i: ModelInput, v: unknown): string {
   if (v === undefined || v === null || v === "") return humanize(i.name);
   if (i.name === "duration") return `${str(v)}s`;
+  if (i.name === "generate_audio") return `Sound ${v ? "on" : "off"}`;
   if (typeof v === "boolean") return `${humanize(i.name)} ${v ? "on" : "off"}`;
   if (i.name === "sound") return `Sound ${str(v)}`;
   if (i.name === "batch_size" || i.name === "num_images") return `×${str(v)}`;
