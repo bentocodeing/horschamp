@@ -25,6 +25,10 @@ The name comes from _hors-champ_, French film vocabulary for what lies just outs
 | **Library**  | Every result saved locally, with filters, favorites, reuse, "use as input", reveal and an optional ffmpeg timeline export.  |
 | **Spending** | A local cost log, sync from usage, CSV export and a confirmation before every paid job.                                     |
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="The Generate screen of Horschamp, shown with sample data" width="100%">
+</p>
+
 ## Security model
 
 - The Higgsfield key (and the optional Anthropic key) live **only in the OS keychain**
