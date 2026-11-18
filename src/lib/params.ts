@@ -29,10 +29,11 @@ export const PRIMARY_PARAMS = [
   "generate_audio",
 ];
 
-export type ParamGroup = "prompt" | "media" | "primary" | "more";
+export type ParamGroup = "prompt" | "negative" | "media" | "primary" | "more";
 
 export function groupOf(i: ModelInput): ParamGroup {
   if (i.name === "prompt") return "prompt";
+  if (i.name === "negative_prompt" && i.type.startsWith("string")) return "negative";
   if (isMediaInput(i)) return "media";
   if (PRIMARY_PARAMS.includes(i.name) && (i.enum || i.type.startsWith("integer") || i.type === "boolean"))
     return "primary";
@@ -135,3 +136,24 @@ export const CATEGORY_LABEL: Record<string, string> = {
   "video-to-video": "Video to video",
   other: "Other",
 };
+
+const TIERS = ["lite", "standard", "std", "turbo", "pro", "master", "4k"];
+
+/**
+ * Sibling models that differ only by a quality tier in their id, e.g. kling-video/v3.0/std/… and
+ * kling-video/v3.0/pro/…. Many video models set quality this way rather than with a param.
+ */
+export function tierSiblings(model: Model, all: Model[]): { tier: string; id: string }[] {
+  const parts = model.id.split("/");
+  const at = parts.findIndex((p) => TIERS.includes(p));
+  if (at < 0) return [];
+  const out = all
+    .filter((m) => {
+      const q = m.id.split("/");
+      return (
+        q.length === parts.length && TIERS.includes(q[at]) && q.every((s, k) => k === at || s === parts[k])
+      );
+    })
+    .map((m) => ({ tier: m.id.split("/")[at], id: m.id }));
+  return out.length > 1 ? out.sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier)) : [];
+}

@@ -31,6 +31,7 @@ function display(i: ModelInput, v: unknown): string {
   if (i.name === "generate_audio") return `Sound ${v ? "on" : "off"}`;
   if (typeof v === "boolean") return `${humanize(i.name)} ${v ? "on" : "off"}`;
   if (i.name === "sound") return `Sound ${str(v)}`;
+  if (i.name === "quality") return `Quality ${str(v)}`;
   if (i.name === "batch_size" || i.name === "num_images") return `×${str(v)}`;
   return str(v);
 }
@@ -247,7 +248,7 @@ export function MoreParams({
       <PopoverTrigger asChild>
         <Pill muted className={cn(hasErr && "text-[#ff8a8a]")}>
           <SlidersHorizontal />
-          More{count ? ` · ${count}` : ""}
+          Advanced{count ? ` · ${count}` : ""}
         </Pill>
       </PopoverTrigger>
       <PopoverContent side="top" align="start" sideOffset={10} className="w-[400px] p-0">

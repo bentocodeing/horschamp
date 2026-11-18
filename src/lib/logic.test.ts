@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 import registry from "../../models.json";
 import type { Model, Shot } from "./api";
-import { carryParams, defaultParams, groupOf, targetInputFor, validateParams, fileKind } from "./params";
+import {
+  carryParams,
+  defaultParams,
+  groupOf,
+  targetInputFor,
+  tierSiblings,
+  validateParams,
+  fileKind,
+} from "./params";
 import { retryRequest, shotToRequest } from "./shots";
 import { usd } from "./format";
 
@@ -26,6 +34,12 @@ describe("params", () => {
     expect(g.cfg_scale).toBe("more");
     const seedance = get("bytedance/seedance-2.5/text-to-video");
     expect(groupOf(seedance.inputs.find((i) => i.name === "generate_audio")!)).toBe("primary");
+  });
+
+  it("finds quality tiers among sibling models", () => {
+    const tiers = tierSiblings(get("kling-video/v3.0/std/text-to-video"), models);
+    expect(tiers.map((t) => t.tier)).toEqual(["std", "pro", "4k"]);
+    expect(tierSiblings(get("bytedance/seedance-2.5/text-to-video"), models)).toEqual([]);
   });
 
   it("validates like the backend", () => {

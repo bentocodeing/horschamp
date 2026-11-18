@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { FolderSearch, MoreHorizontal, RotateCcw, Trash2, Wand2, ImagePlus } from "lucide-react";
+import {
+  Check,
+  Copy,
+  FolderSearch,
+  ImagePlus,
+  MoreHorizontal,
+  Music,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  Wand2,
+} from "lucide-react";
+import { PxFilm } from "@/ui/pixel-icon";
+import { fileKind } from "@/lib/params";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { PxChat } from "@/ui/pixel-icon";
 import { toast } from "sonner";
 import { api, errorMessage, type Job } from "@/lib/api";
@@ -84,18 +98,15 @@ export function JobCard({ job }: { job: Job }) {
       className="flex w-full max-w-[820px] flex-col gap-4"
     >
       {(job.prompt || job.attachments.length > 0) && (
-        <div className="flex justify-end">
-          <div className="selectable max-w-[560px] rounded-[16px_16px_4px_16px] bg-surface-2 px-4 py-3 leading-relaxed">
-            {job.prompt || <span className="text-text-2">No prompt</span>}
-            {job.attachments.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {job.attachments.map((a, i) => (
-                  <Chip key={i}>{basename(a.path)}</Chip>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <UserMessage
+          job={job}
+          active={active}
+          onEdit={reuse}
+          onRegenerate={() =>
+            void queueJobs([{ label: job.model_name, req: retryRequest(job) }], "Run again?")
+          }
+          onDelete={() => void del()}
+        />
       )}
 
       <div className="flex flex-col gap-2.5">
@@ -248,5 +259,122 @@ export function JobCard({ job }: { job: Job }) {
         )}
       </div>
     </motion.article>
+  );
+}
+
+/** The prompt the user sent, with its attachments and hover actions, like a chat message. */
+function UserMessage({
+  job,
+  active,
+  onEdit,
+  onRegenerate,
+  onDelete,
+}: {
+  job: Job;
+  active: boolean;
+  onEdit: () => void;
+  onRegenerate: () => void;
+  onDelete: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const negative = typeof job.params.negative_prompt === "string" ? job.params.negative_prompt : "";
+
+  // Thumbnails are served through the asset protocol, which only allows paths it was told about.
+  useEffect(() => {
+    if (job.attachments.length)
+      void api.previewAllow(job.attachments.map((a) => a.path)).catch(() => undefined);
+  }, [job.attachments]);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(job.prompt ?? "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <div className="group/msg flex flex-col items-end gap-1">
+      <div className="selectable max-w-[560px] rounded-[16px_16px_4px_16px] bg-surface-2 px-4 py-3 leading-relaxed">
+        {job.prompt || <span className="text-text-2">No prompt</span>}
+        {negative && (
+          <div className="mt-1.5 text-[13px] text-text-2">
+            <span className="text-text-3">Avoid: </span>
+            {negative}
+          </div>
+        )}
+        {job.attachments.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {job.attachments.map((a, i) => (
+              <AttachmentThumb key={i} path={a.path} />
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex gap-0.5 opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100 focus-within:opacity-100">
+        {job.prompt && (
+          <MsgAction label={copied ? "Copied" : "Copy prompt"} onClick={() => void copy()}>
+            {copied ? <Check /> : <Copy />}
+          </MsgAction>
+        )}
+        <MsgAction label="Edit in prompt bar" onClick={onEdit}>
+          <Pencil />
+        </MsgAction>
+        {!active && (
+          <MsgAction label="Regenerate" onClick={onRegenerate}>
+            <RotateCcw />
+          </MsgAction>
+        )}
+        {!(active && job.request_id) && (
+          <MsgAction label="Delete" onClick={onDelete}>
+            <Trash2 />
+          </MsgAction>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MsgAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button size="icon-xs" variant="ghost" aria-label={label} onClick={onClick} className="text-text-3">
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function AttachmentThumb({ path }: { path: string }) {
+  const kind = fileKind(path);
+  const name = basename(path);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={() => void api.revealPath(path).catch(() => undefined)}
+          className="overflow-hidden rounded-lg bg-surface-3 shadow-[var(--rim)]"
+          aria-label={name}
+        >
+          {kind === "image" ? (
+            <img src={fileSrc(path)} alt="" className="size-14 object-cover" loading="lazy" />
+          ) : (
+            <span className="grid size-14 place-items-center text-text-2">
+              {kind === "video" ? <PxFilm className="size-5" /> : <Music className="size-5" />}
+            </span>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{name}</TooltipContent>
+    </Tooltip>
   );
 }

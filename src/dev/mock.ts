@@ -203,6 +203,15 @@ const settings: Record<string, string> = {
   library_dir: "~/Movies/Horschamp Library",
 };
 
+/** Fake estimate that varies by model and duration, so per-model pricing is visible in dev. */
+function mockPrice(req: { model_id: string; params: Record<string, unknown> }): number {
+  const video = /video|t2v|i2v|kling|veo|seedance|wan/.test(req.model_id);
+  const seconds = Number(req.params.duration ?? 5) || 5;
+  const hash = req.model_id.split("").reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7);
+  const base = video ? 0.05 + (hash % 20) / 100 : 0.02 + (hash % 8) / 100;
+  return Math.round(base * (video ? seconds : 1) * 100) / 100;
+}
+
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   key_status: () => ({ present: true, hint: "••••a1b2", anthropic_present: false }),
   key_test: () => ({ ok: true, message: "Key works." }),
@@ -211,10 +220,14 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       ? { ok: true, message: "Key accepted by Higgsfield." }
       : { ok: false, message: "Higgsfield rejected this key (401)." },
   models_list: () => registry,
+  models_fetch_latest: () => ({
+    path: "~/Library/Application Support/app.horschamp.desktop/models.refreshed.json",
+    diff: { added: ["example/new-model/v1"], removed: [], changed: [] },
+  }),
   projects_list: () => projects,
   jobs_list: () => jobs,
-  job_quote: () => ({
-    est_usd: 0.12,
+  job_quote: ({ req }) => ({
+    est_usd: mockPrice(req as { model_id: string; params: Record<string, unknown> }),
     estimate_error: null,
     needs_confirm: true,
     threshold_usd: 0,

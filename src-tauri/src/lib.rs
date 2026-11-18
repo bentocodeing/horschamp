@@ -7,6 +7,7 @@ pub mod export;
 pub mod hf;
 pub mod jobs;
 pub mod media;
+pub mod refresh;
 pub mod registry;
 pub mod secrets;
 
@@ -179,6 +180,7 @@ pub fn run() {
             commands::models_preview_import,
             commands::models_apply_import,
             commands::models_reset,
+            commands::models_fetch_latest,
             commands::projects_list,
             commands::project_create,
             commands::project_rename,

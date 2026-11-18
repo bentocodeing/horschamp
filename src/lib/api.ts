@@ -218,6 +218,8 @@ export const api = {
   modelsPreviewImport: (path: string) => invoke<RegistryDiff>("models_preview_import", { path }),
   modelsApplyImport: (path: string) => invoke<RegistryDiff>("models_apply_import", { path }),
   modelsReset: () => invoke<void>("models_reset"),
+  /** Crawl the docs for the latest models. Returns a file to apply with `modelsApplyImport`. */
+  modelsFetchLatest: () => invoke<{ path: string; diff: RegistryDiff }>("models_fetch_latest"),
 
   projects: () => invoke<Project[]>("projects_list"),
   projectCreate: (name: string) => invoke<Project>("project_create", { name }),

@@ -136,6 +136,27 @@ pub fn models_reset(s: S) -> AppResult<()> {
     Ok(())
 }
 
+/// Crawl the docs for the latest models, save the result next to the app data and return its
+/// path plus a diff. Nothing changes until the user applies it with `models_apply_import`.
+#[tauri::command]
+pub async fn models_fetch_latest(s: S<'_>) -> AppResult<FetchedModels> {
+    let current = s.registry.read().unwrap().clone();
+    let text = crate::refresh::fetch_latest(&current).await?;
+    let new = Registry::parse(&text)?;
+    let path = s.data_dir.join("models.refreshed.json");
+    std::fs::write(&path, text)?;
+    Ok(FetchedModels {
+        path: path.to_string_lossy().into_owned(),
+        diff: registry::diff(&current, &new),
+    })
+}
+
+#[derive(serde::Serialize)]
+pub struct FetchedModels {
+    pub path: String,
+    pub diff: RegistryDiff,
+}
+
 // ---------- projects ----------
 
 #[tauri::command]

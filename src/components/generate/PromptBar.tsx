@@ -18,6 +18,7 @@ import {
   mediaKind,
   PRIMARY_PARAMS,
   targetInputFor,
+  tierSiblings,
   validateParams,
 } from "@/lib/params";
 import { basename } from "@/lib/shots";
@@ -29,6 +30,16 @@ import { Button } from "@/ui/button";
 import { Kbd } from "@/ui/surface";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { ModelPicker } from "./ModelPicker";
+import { Pill } from "@/ui/pill";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
+import { PxChevronDown } from "@/ui/pixel-icon";
 import { MoreParams, ParamPill } from "./ParamControls";
 
 const DEFAULT_MODEL = "higgsfield-ai/soul/v2/standard";
@@ -77,6 +88,7 @@ export function PromptBar() {
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [showNegative, setShowNegative] = useState(false);
   const [estimate, setEstimate] = useState<{ usd: number | null; loading: boolean; note?: string }>({
     usd: null,
     loading: false,
@@ -201,18 +213,25 @@ export function PromptBar() {
   useEffect(() => {
     if (!model || !keyPresent) return;
     if (!valid) return setEstimate({ usd: null, loading: false });
-    if (attachments.length) return setEstimate({ usd: null, loading: false, note: "on generate" });
+    // With attachments the quote uploads them first (cached by hash, so Generate reuses the upload).
     setEstimate((e) => ({ ...e, loading: true }));
-    const t = setTimeout(() => {
-      api
-        .jobQuote({ model_id: model.id, params: allParams, attachments: [], project_id: projectId })
-        .then((q) =>
-          setEstimate({ usd: q.est_usd, loading: false, note: q.estimate_error ? "unavailable" : undefined }),
-        )
-        .catch(() => setEstimate({ usd: null, loading: false, note: "unavailable" }));
-    }, 700);
+    const t = setTimeout(
+      () => {
+        api
+          .jobQuote({ model_id: model.id, params: allParams, attachments, project_id: projectId })
+          .then((q) =>
+            setEstimate({
+              usd: q.est_usd,
+              loading: false,
+              note: q.estimate_error ? "unavailable" : undefined,
+            }),
+          )
+          .catch(() => setEstimate({ usd: null, loading: false, note: "unavailable" }));
+      },
+      attachments.length ? 1200 : 700,
+    );
     return () => clearTimeout(t);
-  }, [model, allParams, attachments.length, valid, keyPresent, projectId]);
+  }, [model, allParams, attachments, valid, keyPresent, projectId]);
 
   const pickFiles = async (forced?: ModelInput) => {
     const kind = forced ? mediaKind(forced) : undefined;
@@ -239,12 +258,18 @@ export function PromptBar() {
     }
     setBusy(true);
     try {
-      await queueJobs([
+      const queued = await queueJobs([
         {
           label: `${model.name}${prompt ? ` · ${prompt.slice(0, 60)}` : ""}`,
           req: { model_id: model.id, params: allParams, attachments, project_id: projectId },
         },
       ]);
+      // Start fresh once the job is queued; settings (model, params) stay for the next shot.
+      if (queued.length) {
+        setPrompt("");
+        setAttachments([]);
+        setParam("negative_prompt", undefined);
+      }
     } finally {
       setBusy(false);
     }
@@ -254,6 +279,9 @@ export function PromptBar() {
   const primary = model.inputs
     .filter((i) => groupOf(i) === "primary")
     .sort((a, b) => PRIMARY_PARAMS.indexOf(a.name) - PRIMARY_PARAMS.indexOf(b.name));
+  const negativeInput = model.inputs.find((i) => groupOf(i) === "negative");
+  const negative = typeof params.negative_prompt === "string" ? params.negative_prompt : "";
+  const tiers = tierSiblings(model, models);
   const needsMedia = model.inputs.filter((i) => isMediaInput(i) && i.required && !mediaFilled.has(i.name));
 
   return (
@@ -335,6 +363,33 @@ export function PromptBar() {
           className="field-sizing-content max-h-48 min-h-11 resize-none bg-transparent px-1 text-[15px] leading-6 text-text-1 outline-none placeholder:text-text-3 focus-visible:shadow-none"
         />
 
+        {negativeInput && (showNegative || negative) && (
+          <div className="flex items-start gap-2 border-t border-subtle px-1 pt-2.5">
+            <label htmlFor="negative-prompt" className="eyebrow mt-1 shrink-0 text-text-3">
+              Avoid
+            </label>
+            <textarea
+              id="negative-prompt"
+              value={negative}
+              onChange={(e) => setParam("negative_prompt", e.target.value || undefined)}
+              maxLength={negativeInput.maxLength}
+              rows={1}
+              placeholder="What to keep out: blur, text, extra fingers…"
+              className="field-sizing-content max-h-28 min-h-7 flex-1 resize-none bg-transparent text-[13px] leading-6 text-text-1 outline-none placeholder:text-text-3 focus-visible:shadow-none"
+            />
+            <button
+              aria-label="Remove negative prompt"
+              className="mt-1 grid size-5 place-items-center rounded text-text-3 hover:bg-fill-2 hover:text-text-1"
+              onClick={() => {
+                setParam("negative_prompt", undefined);
+                setShowNegative(false);
+              }}
+            >
+              <PxX className="size-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -350,9 +405,20 @@ export function PromptBar() {
             <TooltipContent>Attach image, video or audio</TooltipContent>
           </Tooltip>
           <ModelPicker models={models} value={model.id} onChange={setModelId} />
+          {tiers.length > 0 && <TierPill tiers={tiers} value={model.id} onChange={setModelId} />}
           {primary.map((i) => (
             <ParamPill key={`${model.id}-${i.name}`} input={i} value={params[i.name]} onChange={setParam} />
           ))}
+          {negativeInput && !showNegative && !negative && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Pill muted onClick={() => setShowNegative(true)}>
+                  <PxPlus /> Negative
+                </Pill>
+              </TooltipTrigger>
+              <TooltipContent>Describe what the model should avoid</TooltipContent>
+            </Tooltip>
+          )}
           <MoreParams
             model={model}
             params={params}
@@ -395,5 +461,48 @@ function Thumb({ path }: { path: string }) {
     <div className="grid size-[52px] place-items-center rounded-md bg-surface-3 text-text-2">
       {kind === "video" ? <PxFilm className="size-5" /> : <Music className="size-5" />}
     </div>
+  );
+}
+
+const TIER_LABEL: Record<string, string> = {
+  lite: "Lite",
+  standard: "Standard",
+  std: "Standard",
+  turbo: "Turbo",
+  pro: "Pro",
+  master: "Master",
+  "4k": "4K",
+};
+
+/** Quality tier for models that ship as std / pro / 4k variants instead of a resolution param. */
+function TierPill({
+  tiers,
+  value,
+  onChange,
+}: {
+  tiers: { tier: string; id: string }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const current = tiers.find((t) => t.id === value);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Pill aria-label="Quality">
+          {TIER_LABEL[current?.tier ?? ""] ?? current?.tier}
+          <PxChevronDown className="opacity-50" />
+        </Pill>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" sideOffset={10} className="min-w-36">
+        <DropdownMenuLabel className="eyebrow">Quality</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
+          {tiers.map((t) => (
+            <DropdownMenuRadioItem key={t.id} value={t.id}>
+              {TIER_LABEL[t.tier] ?? t.tier}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

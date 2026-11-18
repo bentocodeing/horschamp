@@ -21,6 +21,18 @@ export function ModelsCard() {
   const [pending, setPending] = useState<{ path: string; diff: RegistryDiff } | null>(null);
   const [ffmpeg, setFfmpeg] = useState<{ available: boolean; path: string | null } | null>(null);
   const [installing, setInstalling] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  const checkOnline = async () => {
+    setChecking(true);
+    try {
+      setPending(await api.modelsFetchLatest());
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const installFfmpeg = async () => {
     setInstalling(true);
@@ -76,7 +88,12 @@ export function ModelsCard() {
         </span>
       </Row>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={pick}>Import refreshed models.json…</Button>
+        <Button onClick={() => void checkOnline()} disabled={checking}>
+          {checking ? "Checking the docs…" : "Check for new models"}
+        </Button>
+        <Button variant="secondary" onClick={pick}>
+          Import models.json…
+        </Button>
         <Confirm
           title="Reset to the bundled registry?"
           description="Drops any imported models.json and uses the one shipped with the app."
@@ -91,8 +108,8 @@ export function ModelsCard() {
         </Confirm>
       </div>
       <div className="text-xs text-text-3">
-        Run <code className="font-mono text-text-2">pnpm refresh-models</code> to regenerate models.json from
-        the Higgsfield docs, then import it here.
+        Reads the public Higgsfield docs for new or changed models and shows the changes before applying them.
+        Takes about a minute.
       </div>
       <Row label="ffmpeg (timeline export)" muted>
         {ffmpeg?.available ? (
