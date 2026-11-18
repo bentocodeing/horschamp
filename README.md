@@ -47,6 +47,10 @@ The name comes from _hors-champ_, French film vocabulary for what lies just outs
 - Optional: `ffmpeg`/`ffprobe` on your PATH for timeline export and video keyframes in Brief.
 - Optional: [Claude Code](https://claude.com/claude-code), logged in, for the Brief director.
 
+## Download
+
+Get the latest `.dmg` (macOS, Apple Silicon and Intel), `.AppImage` or `.deb` (Linux x86_64) from [Releases](https://github.com/bentocodeing/horschamp/releases).
+
 ## Develop
 
 ```bash
@@ -79,12 +83,19 @@ UI components are [shadcn/ui](https://ui.shadcn.com) (in `src/ui/`), rethemed wi
 pnpm tauri build
 ```
 
-Outputs land in `src-tauri/target/release/bundle/`:
-
-- macOS: `macos/Horschamp.app` and `dmg/Horschamp_0.1.0_*.dmg`
-- Linux: `appimage/*.AppImage` and `deb/*.deb` (build on Linux)
+Outputs land in `src-tauri/target/release/bundle/` (`macos/Horschamp.app` and `dmg/*.dmg` on macOS).
 
 Builds are unsigned. On macOS, right-click → Open the first time, or sign with your own Developer ID.
+
+### Publishing a release
+
+Releases are built on a Mac, for macOS and Linux, without GitHub Actions:
+
+```bash
+scripts/release-mac.sh
+```
+
+It bumps the version, tags and pushes `v<version>`, builds the universal `.dmg` locally and the Linux `.AppImage` and `.deb` in Docker (`scripts/build-linux.sh`, Ubuntu 22.04 x86_64), then creates the GitHub release with all three files. Docker Desktop (or OrbStack) must be running. `scripts/release-mac.sh --dry-run` builds everything without publishing.
 
 ## API keys
 

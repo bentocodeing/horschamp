@@ -11,3 +11,4 @@ src-tauri/gen/schemas/
 *.log
 coverage/
 models.refreshed.json
+dist-release/
