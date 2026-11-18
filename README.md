@@ -1,18 +1,29 @@
-# Horschamp
+<p align="center">
+  <img src="docs/banner.svg" alt="Horschamp: an unofficial desktop client for the Higgsfield API" width="100%">
+</p>
 
-**An unofficial, open-source desktop client for the Higgsfield API.**
+<p align="center">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-c6ff3d?style=flat-square&labelColor=1c1e21">
+  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-c6ff3d?style=flat-square&labelColor=1c1e21">
+  <img alt="Platforms" src="https://img.shields.io/badge/macOS%20%C2%B7%20Linux-desktop-898a8b?style=flat-square&labelColor=1c1e21">
+  <img alt="Unofficial" src="https://img.shields.io/badge/status-unofficial-ffb547?style=flat-square&labelColor=1c1e21">
+</p>
 
-A Tauri 2 app (macOS and Linux) for generating video and images with your own Higgsfield account and API key.
-React + TypeScript frontend, Rust backend. Free, MIT-licensed.
+> [!IMPORTANT]
+> **Horschamp is an independent, unofficial project.** It is not affiliated with, endorsed by, sponsored by or connected to Higgsfield in any way. "Higgsfield" is a trademark of its owner and is used here only to say which API this client works with. Horschamp has its own name, logo and [design system](docs/DESIGN_SYSTEM.md), and uses no Higgsfield logos, artwork, code or assets.
 
-> Horschamp is not affiliated with, endorsed by or sponsored by Higgsfield. "Higgsfield" is a trademark of its owner and is used here only to say which service this client works with.
+A Tauri 2 desktop app (macOS and Linux) for generating video and images with **your own** Higgsfield account and API key. React + TypeScript frontend, Rust backend. Free, MIT-licensed.
 
 The name comes from _hors-champ_, French film vocabulary for what lies just outside the frame.
 
-- **Generate**: chat-style composer, drag-drop inputs, parameters built from each model's schema, live cost estimate.
-- **Brief**: a Claude "director" that asks questions, researches the docs and proposes a validated shot list you can queue in one click.
-- **Library**: every result saved locally, with filters, favorites, reuse, "use as input", reveal and an optional ffmpeg timeline export.
-- **Spending**: a local cost log, sync from Higgsfield usage, and a confirmation before every paid job.
+## Features
+
+|              |                                                                                                                             |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| **Generate** | Chat-style composer, drag-drop inputs, parameters built from each model's schema, live cost estimate.                       |
+| **Brief**    | A Claude "director" that asks questions, researches the docs and proposes a validated shot list you can queue in one click. |
+| **Library**  | Every result saved locally, with filters, favorites, reuse, "use as input", reveal and an optional ffmpeg timeline export.  |
+| **Spending** | A local cost log, sync from usage, CSV export and a confirmation before every paid job.                                     |
 
 ## Security model
 

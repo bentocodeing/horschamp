@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" role="img" aria-label="Horschamp: an unofficial desktop client for the Higgsfield API">
+  <!-- README banner. Colors come from src/styles/tokens.css (--bg-app, --bg-surface, --accent, --accent-2, --text-1/2). -->
+  <defs>
+    <radialGradient id="glow" cx="0.82" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#c6ff3d" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#c6ff3d" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="400" rx="24" fill="#0f1113"/>
+  <rect width="1280" height="400" rx="24" fill="url(#grid)"/>
+  <rect width="1280" height="400" rx="24" fill="url(#glow)"/>
+  <rect x="0.5" y="0.5" width="1279" height="399" rx="23.5" fill="none" stroke="#ffffff" stroke-opacity="0.1"/>
+
+  <!-- Frame marks: what lies just outside the frame -->
+  <g stroke="#c6ff3d" stroke-width="4" fill="none" stroke-linecap="round">
+    <path d="M900 110v-28h28"/><path d="M1148 82h28v28"/>
+    <path d="M1176 290v28h-28"/><path d="M928 318h-28v-28"/>
+  </g>
+  <rect x="980" y="140" width="116" height="116" rx="26" fill="#c6ff3d"/>
+  <path transform="translate(1011 171) scale(13.5)" fill="#000000" d="M1 0.28Q1 0 1.28 0L3.72 0Q4 0 4 0.28L4 2.72Q4 3 3.72 3L3.28 3Q3 3 3 2.72L3 2.28Q3 2 2.72 2L2 2L2 1.28Q2 1 1.72 1L1.28 1Q1 1 1 0.72ZM2 2L2 2.72Q2 3 1.72 3L1 3L1 2.28Q1 2 1.28 2ZM1 3L1 3.72Q1 4 0.72 4L0.28 4Q0 4 0 3.72L0 3.28Q0 3 0.28 3Z"/>
+
+  <g font-family="'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif">
+    <text x="88" y="132" font-size="15" font-weight="600" letter-spacing="3" fill="#ffb547">UNOFFICIAL · OPEN SOURCE · MIT</text>
+    <text x="84" y="218" font-size="88" font-weight="700" letter-spacing="-2" fill="#f7f7f8">HORSCHAMP</text>
+    <text x="88" y="268" font-size="24" font-weight="500" fill="#898a8b">A desktop client for the Higgsfield API.</text>
+    <text x="88" y="302" font-size="24" font-weight="500" fill="#898a8b">Your key, your machine, no server in between.</text>
+  </g>
+</svg>
