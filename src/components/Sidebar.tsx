@@ -8,6 +8,7 @@ import { usd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Input } from "@/ui/input";
 import { BriefList } from "@/screens/Brief";
+import { ThreadList } from "@/components/generate/ThreadList";
 
 const NAV: { route: Route; label: string; icon: typeof PxSparkle }[] = [
   { route: "generate", label: "Generate", icon: PxSparkle },
@@ -117,6 +118,7 @@ export function Sidebar() {
               </button>
             )}
           </div>
+          {route === "generate" && <ThreadList />}
         </>
       )}
 

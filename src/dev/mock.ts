@@ -3,7 +3,7 @@
 // import.meta.env.DEV is true and the page is not running inside Tauri.
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import registry from "../../models.json";
-import type { Asset, Brief, BriefMessage, Job, LibraryItem, Project } from "@/lib/api";
+import type { Asset, Brief, BriefMessage, Job, LibraryItem, Project, Thread } from "@/lib/api";
 
 const now = Date.now();
 const iso = (minAgo: number) => new Date(now - minAgo * 60_000).toISOString();
@@ -40,6 +40,7 @@ function job(over: Partial<Job> & Pick<Job, "id" | "model_id" | "prompt" | "stat
     brief_id: null,
     shot_index: null,
     retry_of: null,
+    thread_id: "t1",
     created_at: iso(30),
     updated_at: iso(29),
     finished_at: null,
@@ -104,6 +105,25 @@ const jobs: Job[] = [
   }),
 ];
 jobs[1].assets = colors.slice(0, 4).map(([a, b], i) => asset(`a${i}`, "j2", swatch(a, b), 12, i === 1));
+
+const threads: Thread[] = [
+  {
+    id: "t1",
+    project_id: "p1",
+    title: jobs[0].prompt.slice(0, 60),
+    created_at: iso(42),
+    updated_at: iso(1),
+    job_count: 3,
+  },
+  {
+    id: "t2",
+    project_id: "p1",
+    title: "Granola packshots for the spring launch",
+    created_at: iso(3000),
+    updated_at: iso(2900),
+    job_count: 0,
+  },
+];
 
 const extra: LibraryItem[] = colors.slice(4).map(([c1, c2], i) => {
   const j = job({
@@ -226,6 +246,29 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   }),
   projects_list: () => projects,
   jobs_list: () => jobs,
+  thread_jobs: ({ threadId }) => jobs.filter((j) => j.thread_id === (threadId ?? null)),
+  threads_list: () => [...threads].sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+  thread_create: ({ projectId }) => {
+    const t: Thread = {
+      id: "t" + Date.now(),
+      project_id: (projectId as string | null) ?? null,
+      title: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      job_count: 0,
+    };
+    threads.push(t);
+    return t;
+  },
+  thread_rename: ({ id, title }) => {
+    const t = threads.find((x) => x.id === id);
+    if (t) t.title = String(title);
+  },
+  thread_delete: ({ id }) => {
+    const i = threads.findIndex((x) => x.id === id);
+    if (i >= 0) threads.splice(i, 1);
+    for (const j of jobs) if (j.thread_id === id) j.thread_id = null;
+  },
   job_quote: ({ req }) => ({
     est_usd: mockPrice(req as { model_id: string; params: Record<string, unknown> }),
     estimate_error: null,

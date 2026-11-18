@@ -50,7 +50,11 @@ pub fn schema_from(md: &str) -> Option<Value> {
     let i = md.find("Complete JSON schema")?;
     let lines: Vec<&str> = md[i..]
         .lines()
-        .map(|l| l.strip_prefix("> ").or_else(|| l.strip_prefix('>')).unwrap_or(l))
+        .map(|l| {
+            l.strip_prefix("> ")
+                .or_else(|| l.strip_prefix('>'))
+                .unwrap_or(l)
+        })
         .collect();
     let start = lines.iter().position(|l| l.starts_with("```json"))?;
     let end = lines
@@ -130,7 +134,10 @@ fn inputs_from(schema: &Value) -> Vec<Value> {
             out.insert("name".into(), json!(name));
             out.insert("type".into(), json!(type_of(p)));
             out.insert("required".into(), json!(req.contains(name.as_str())));
-            out.insert("default".into(), p.get("default").cloned().unwrap_or(Value::Null));
+            out.insert(
+                "default".into(),
+                p.get("default").cloned().unwrap_or(Value::Null),
+            );
             let desc = p
                 .get("description")
                 .or_else(|| p.get("title"))
@@ -176,7 +183,15 @@ pub fn category(id: &str) -> &'static str {
         "object-swap",
     ]) {
         "video-to-video"
-    } else if any(&["image", "soul", "recraft", "ideogram", "z-image", "ads", "marketing"]) {
+    } else if any(&[
+        "image",
+        "soul",
+        "recraft",
+        "ideogram",
+        "z-image",
+        "ads",
+        "marketing",
+    ]) {
         "image"
     } else {
         "other"
@@ -266,7 +281,9 @@ pub async fn fetch_latest(current: &Registry) -> AppResult<String> {
             .and_then(|p| p.output.as_ref())
             .map(serde_json::to_value)
             .transpose()?
-            .unwrap_or_else(|| json!({ "type": if cat.contains("video") { "video" } else { "image" } }));
+            .unwrap_or_else(
+                || json!({ "type": if cat.contains("video") { "video" } else { "image" } }),
+            );
         let cost = prev
             .and_then(|p| p.cost.as_ref())
             .map(serde_json::to_value)

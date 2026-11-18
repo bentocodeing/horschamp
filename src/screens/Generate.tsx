@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
-import { KeyRound } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { KeyRound, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/api";
+import { UNTITLED_THREAD } from "@/components/generate/ThreadList";
+import { Input } from "@/ui/input";
 import { useStore } from "@/store";
 import { JobCard } from "@/components/generate/JobCard";
 import { PromptBar } from "@/components/generate/PromptBar";
@@ -13,7 +17,8 @@ const IDEAS = [
 ];
 
 export default function Generate() {
-  const { jobs, projects, projectId, key, setRoute, presetComposer } = useStore();
+  const { jobs, projects, projectId, key, setRoute, presetComposer, threads, threadId } = useStore();
+  const thread = threads.find((t) => t.id === threadId);
   const list = useMemo(
     () => Object.values(jobs).sort((a, b) => a.created_at.localeCompare(b.created_at)),
     [jobs],
@@ -32,7 +37,29 @@ export default function Generate() {
         <div className="flex items-center gap-2.5">
           <span className="text-text-2">{project?.name ?? "All work"}</span>
           <span className="text-text-3">/</span>
-          <span className="font-semibold">Generate</span>
+          {threadId === null ? (
+            <span className="font-semibold">Earlier jobs</span>
+          ) : thread ? (
+            <ThreadTitle key={thread.id} id={thread.id} title={thread.title} />
+          ) : (
+            <span className="font-semibold">Generate</span>
+          )}
+          {thread && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Delete conversation"
+              title="Delete conversation (its media stays in the Library)"
+              onClick={() =>
+                useStore
+                  .getState()
+                  .deleteThread(thread.id)
+                  .catch((e) => toast.error(errorMessage(e)))
+              }
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          )}
         </div>
         {running > 0 && (
           <span className="flex h-7 items-center gap-1.5 rounded-full bg-fill-1 px-2.5 text-xs text-text-2">
@@ -82,5 +109,47 @@ export default function Generate() {
 
       <PromptBar />
     </div>
+  );
+}
+
+function ThreadTitle({ id, title }: { id: string; title: string }) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(title);
+  const commit = async () => {
+    setEditing(false);
+    const t = v.trim();
+    if (!t || t === title) return setV(title);
+    try {
+      await useStore.getState().renameThread(id, t);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  };
+  return editing ? (
+    <Input
+      autoFocus
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") void commit();
+        if (e.key === "Escape") {
+          setV(title);
+          setEditing(false);
+        }
+      }}
+      className="no-drag h-8 max-w-sm font-semibold"
+    />
+  ) : (
+    <button
+      onClick={() => {
+        setV(title);
+        setEditing(true);
+      }}
+      className="no-drag max-w-[420px] truncate rounded-md px-1 -mx-1 font-semibold hover:bg-fill-1"
+      title="Rename"
+    >
+      {title || UNTITLED_THREAD}
+    </button>
   );
 }

@@ -78,6 +78,7 @@ export function PromptBar() {
   const registry = useStore((s) => s.registry);
   const modelsById = useStore((s) => s.modelsById);
   const projectId = useStore((s) => s.projectId);
+  const threadId = useStore((s) => s.threadId);
   const keyPresent = useStore((s) => !!s.key?.present);
   const composer = useStore((s) => s.composer);
   const models = useMemo(() => registry?.models ?? [], [registry]);
@@ -261,7 +262,13 @@ export function PromptBar() {
       const queued = await queueJobs([
         {
           label: `${model.name}${prompt ? ` · ${prompt.slice(0, 60)}` : ""}`,
-          req: { model_id: model.id, params: allParams, attachments, project_id: projectId },
+          req: {
+            model_id: model.id,
+            params: allParams,
+            attachments,
+            project_id: projectId,
+            thread_id: threadId ?? (await useStore.getState().newThread()),
+          },
         },
       ]);
       // Start fresh once the job is queued; settings (model, params) stay for the next shot.

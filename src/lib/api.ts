@@ -97,7 +97,17 @@ export interface Job {
   created_at: string;
   updated_at: string;
   finished_at: string | null;
+  thread_id: string | null;
   assets: Asset[];
+}
+/** A Generate conversation. An empty title means no job was sent yet. */
+export interface Thread {
+  id: string;
+  project_id: string | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  job_count: number;
 }
 export interface JobRequest {
   model_id: string;
@@ -108,6 +118,7 @@ export interface JobRequest {
   brief_id?: string | null;
   shot_index?: number | null;
   retry_of?: string | null;
+  thread_id?: string | null;
 }
 export interface Quote {
   est_usd: number | null;
@@ -230,6 +241,13 @@ export const api = {
   jobSubmit: (req: JobRequest, confirmedUsd: number | null) =>
     invoke<Job>("job_submit", { req, confirmedUsd }),
   jobs: (projectId: string | null, limit = 100) => invoke<Job[]>("jobs_list", { projectId, limit }),
+  /** Jobs of one conversation; `threadId` null returns jobs outside any conversation. */
+  threadJobs: (threadId: string | null, projectId: string | null, limit = 200) =>
+    invoke<Job[]>("thread_jobs", { threadId, projectId, limit }),
+  threads: (projectId: string | null) => invoke<Thread[]>("threads_list", { projectId }),
+  threadCreate: (projectId: string | null) => invoke<Thread>("thread_create", { projectId }),
+  threadRename: (id: string, title: string) => invoke<void>("thread_rename", { id, title }),
+  threadDelete: (id: string) => invoke<void>("thread_delete", { id }),
   job: (id: string) => invoke<Job>("job_get", { id }),
   jobCancel: (id: string) => invoke<string>("job_cancel", { id }),
   jobDelete: (id: string) => invoke<void>("job_delete", { id }),

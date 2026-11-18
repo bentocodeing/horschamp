@@ -15,7 +15,8 @@ pub fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL
 );
@@ -83,7 +84,19 @@ CREATE TABLE IF NOT EXISTS usage_syncs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, synced_at TEXT NOT NULL, start TEXT NOT NULL, end TEXT NOT NULL,
   total_usd REAL NOT NULL, by_model_json TEXT NOT NULL
 );
-"#];
+"#,
+    r#"
+CREATE TABLE IF NOT EXISTS threads (
+  id TEXT PRIMARY KEY,
+  project_id TEXT,
+  title TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+ALTER TABLE jobs ADD COLUMN thread_id TEXT;
+CREATE INDEX IF NOT EXISTS jobs_thread ON jobs(thread_id, created_at);
+"#,
+];
 
 pub struct Db(Mutex<Connection>);
 
@@ -126,7 +139,20 @@ pub struct Job {
     pub updated_at: String,
     pub finished_at: Option<String>,
     #[serde(default)]
+    pub thread_id: Option<String>,
+    #[serde(default)]
     pub assets: Vec<Asset>,
+}
+
+/// A Generate conversation: an ordered group of jobs.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Thread {
+    pub id: String,
+    pub project_id: Option<String>,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub job_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -181,7 +207,7 @@ pub struct LibraryItem {
     pub job: Job,
 }
 
-const JOB_COLS: &str = "id, project_id, model_id, model_name, category, prompt, params_json, attachments_json, status, request_id, idempotency_key, est_usd, cost_usd, error, source, brief_id, shot_index, retry_of, created_at, updated_at, finished_at";
+const JOB_COLS: &str = "id, project_id, model_id, model_name, category, prompt, params_json, attachments_json, status, request_id, idempotency_key, est_usd, cost_usd, error, source, brief_id, shot_index, retry_of, created_at, updated_at, finished_at, thread_id";
 
 fn job_from_row(r: &Row) -> rusqlite::Result<Job> {
     let params: String = r.get(6)?;
@@ -208,6 +234,7 @@ fn job_from_row(r: &Row) -> rusqlite::Result<Job> {
         created_at: r.get(18)?,
         updated_at: r.get(19)?,
         finished_at: r.get(20)?,
+        thread_id: r.get(21)?,
         assets: vec![],
     })
 }
@@ -345,7 +372,7 @@ impl Db {
     pub fn insert_job(&self, j: &Job) -> AppResult<()> {
         self.c().execute(
             &format!(
-                "INSERT INTO jobs({JOB_COLS}) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                "INSERT INTO jobs({JOB_COLS}) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             ),
             params![
                 j.id,
@@ -368,9 +395,22 @@ impl Db {
                 j.retry_of,
                 j.created_at,
                 j.updated_at,
-                j.finished_at
+                j.finished_at,
+                j.thread_id
             ],
         )?;
+        if let Some(tid) = &j.thread_id {
+            let title: String = j.prompt.chars().take(60).collect();
+            let title = if title.trim().is_empty() {
+                j.model_name.clone()
+            } else {
+                title
+            };
+            self.c().execute(
+                "UPDATE threads SET updated_at=?1, title=CASE WHEN title='' THEN ?2 ELSE title END WHERE id=?3",
+                params![j.created_at, title.trim(), tid],
+            )?;
+        }
         Ok(())
     }
 
@@ -401,6 +441,78 @@ impl Db {
             j.assets = self.assets_for_job(&j.id)?;
         }
         Ok(jobs)
+    }
+
+    /// Jobs of one conversation, or of no conversation when `thread_id` is None.
+    pub fn thread_jobs(
+        &self,
+        thread_id: Option<&str>,
+        project_id: Option<&str>,
+        limit: i64,
+    ) -> AppResult<Vec<Job>> {
+        let mut jobs = {
+            let c = self.c();
+            let mut st = c.prepare(&format!(
+                "SELECT {JOB_COLS} FROM jobs WHERE (?1 IS NULL OR project_id=?1)
+                 AND ((?2 IS NULL AND thread_id IS NULL) OR thread_id=?2)
+                 ORDER BY created_at DESC LIMIT ?3"
+            ))?;
+            let rows = st.query_map(params![project_id, thread_id, limit], job_from_row)?;
+            rows.collect::<Result<Vec<_>, _>>()?
+        };
+        for j in &mut jobs {
+            j.assets = self.assets_for_job(&j.id)?;
+        }
+        Ok(jobs)
+    }
+
+    // ---- threads ----
+    pub fn threads(&self, project_id: Option<&str>) -> AppResult<Vec<Thread>> {
+        let c = self.c();
+        let mut st = c.prepare(
+            "SELECT t.id, t.project_id, t.title, t.created_at, t.updated_at,
+                    (SELECT COUNT(*) FROM jobs j WHERE j.thread_id=t.id)
+             FROM threads t WHERE (?1 IS NULL OR t.project_id=?1) ORDER BY t.updated_at DESC",
+        )?;
+        let rows = st.query_map([project_id], |r| {
+            Ok(Thread {
+                id: r.get(0)?,
+                project_id: r.get(1)?,
+                title: r.get(2)?,
+                created_at: r.get(3)?,
+                updated_at: r.get(4)?,
+                job_count: r.get(5)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+    pub fn create_thread(&self, project_id: Option<&str>) -> AppResult<Thread> {
+        let t = now();
+        let th = Thread {
+            id: new_id(),
+            project_id: project_id.map(String::from),
+            title: String::new(),
+            created_at: t.clone(),
+            updated_at: t,
+            job_count: 0,
+        };
+        self.c().execute(
+            "INSERT INTO threads(id,project_id,title,created_at,updated_at) VALUES(?,?,?,?,?)",
+            params![th.id, th.project_id, th.title, th.created_at, th.updated_at],
+        )?;
+        Ok(th)
+    }
+    pub fn rename_thread(&self, id: &str, title: &str) -> AppResult<()> {
+        self.c()
+            .execute("UPDATE threads SET title=? WHERE id=?", params![title, id])?;
+        Ok(())
+    }
+    /// Deletes the conversation only; its jobs and media stay in the library.
+    pub fn delete_thread(&self, id: &str) -> AppResult<()> {
+        let c = self.c();
+        c.execute("UPDATE jobs SET thread_id=NULL WHERE thread_id=?", [id])?;
+        c.execute("DELETE FROM threads WHERE id=?", [id])?;
+        Ok(())
     }
 
     pub fn active_jobs(&self) -> AppResult<Vec<Job>> {
@@ -735,6 +847,7 @@ fn job_from_row_offset(r: &Row, off: usize) -> rusqlite::Result<Job> {
         created_at: r.get(off + 18)?,
         updated_at: r.get(off + 19)?,
         finished_at: r.get(off + 20)?,
+        thread_id: r.get(off + 21)?,
         assets: vec![],
     })
 }
@@ -764,6 +877,7 @@ pub fn sample_job(model: &str) -> Job {
         created_at: t.clone(),
         updated_at: t,
         finished_at: None,
+        thread_id: None,
         assets: vec![],
     }
 }
@@ -771,6 +885,24 @@ pub fn sample_job(model: &str) -> Job {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn threads_group_jobs_and_take_first_prompt_as_title() {
+        let db = Db::memory().unwrap();
+        let th = db.create_thread(None).unwrap();
+        let mut j = sample_job("m");
+        j.thread_id = Some(th.id.clone());
+        db.insert_job(&j).unwrap();
+        db.insert_job(&sample_job("m")).unwrap();
+        let list = db.threads(None).unwrap();
+        assert_eq!(list[0].title, "a lake");
+        assert_eq!(list[0].job_count, 1);
+        assert_eq!(db.thread_jobs(Some(&th.id), None, 10).unwrap().len(), 1);
+        assert_eq!(db.thread_jobs(None, None, 10).unwrap().len(), 1);
+        db.delete_thread(&th.id).unwrap();
+        assert!(db.threads(None).unwrap().is_empty());
+        assert_eq!(db.thread_jobs(None, None, 10).unwrap().len(), 2);
+    }
 
     #[test]
     fn job_roundtrip_and_library() {

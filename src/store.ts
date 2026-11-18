@@ -9,6 +9,7 @@ import {
   type Quote,
   type Registry,
   type Spending,
+  type Thread,
 } from "@/lib/api";
 
 export type Route = "generate" | "brief" | "library" | "settings" | "design";
@@ -40,6 +41,10 @@ interface State {
   key: KeyStatus | null;
   spending: Spending | null;
   jobs: Record<string, Job>;
+  /** Generate conversations, newest activity first. */
+  threads: Thread[];
+  /** Open conversation; null shows jobs made outside any conversation. */
+  threadId: string | null;
   composer: ComposerPreset | null;
   briefSeed: { text: string; attachments: string[]; nonce: number } | null;
   activeBriefId: string | null;
@@ -51,6 +56,12 @@ interface State {
   loadProjects: () => Promise<void>;
   loadModels: () => Promise<void>;
   loadJobs: () => Promise<void>;
+  loadThreads: () => Promise<void>;
+  openThread: (id: string | null) => void;
+  /** Open an empty conversation, reusing the current one if it has no jobs yet. */
+  newThread: () => Promise<string>;
+  renameThread: (id: string, title: string) => Promise<void>;
+  deleteThread: (id: string) => Promise<void>;
   refreshKey: () => Promise<void>;
   refreshSpending: () => Promise<void>;
   upsertJob: (j: Job) => void;
@@ -70,6 +81,8 @@ export const useStore = create<State>((set, get) => ({
   key: null,
   spending: null,
   jobs: {},
+  threads: [],
+  threadId: null,
   composer: null,
   briefSeed: null,
   activeBriefId: null,
@@ -78,7 +91,10 @@ export const useStore = create<State>((set, get) => ({
   setRoute: (route) => set({ route }),
   setProject: (projectId) => {
     set({ projectId });
-    void get().loadJobs();
+    void get()
+      .loadThreads()
+      .then(() => set({ threadId: get().threads[0]?.id ?? null }))
+      .then(() => get().loadJobs());
   },
   init: async () => {
     await Promise.all([
@@ -87,6 +103,8 @@ export const useStore = create<State>((set, get) => ({
       get().refreshKey(),
       get().refreshSpending(),
     ]);
+    await get().loadThreads();
+    set({ threadId: get().threads[0]?.id ?? null });
     await get().loadJobs();
   },
   loadProjects: async () => set({ projects: await api.projects() }),
@@ -95,14 +113,45 @@ export const useStore = create<State>((set, get) => ({
     set({ registry, modelsById: Object.fromEntries(registry.models.map((m) => [m.id, m])) });
   },
   loadJobs: async () => {
-    const list = await api.jobs(get().projectId, 200);
+    const { threadId, projectId } = get();
+    const list = await api.threadJobs(threadId, projectId, 200);
+    if (get().threadId !== threadId) return;
     set({ jobs: Object.fromEntries(list.map((j) => [j.id, j])) });
+  },
+  loadThreads: async () => set({ threads: await api.threads(get().projectId) }),
+  openThread: (threadId) => {
+    set({ threadId, jobs: {} });
+    void get().loadJobs();
+  },
+  newThread: async () => {
+    const { threadId, threads, jobs } = get();
+    const current = threads.find((t) => t.id === threadId);
+    if (current && !current.title && Object.keys(jobs).length === 0) return current.id;
+    const t = await api.threadCreate(get().projectId);
+    set((s) => ({ threads: [t, ...s.threads] }));
+    get().openThread(t.id);
+    return t.id;
+  },
+  renameThread: async (id, title) => {
+    await api.threadRename(id, title);
+    set((s) => ({ threads: s.threads.map((t) => (t.id === id ? { ...t, title } : t)) }));
+  },
+  deleteThread: async (id) => {
+    await api.threadDelete(id);
+    const threads = get().threads.filter((t) => t.id !== id);
+    set({ threads });
+    if (get().threadId === id) get().openThread(threads[0]?.id ?? null);
   },
   refreshKey: async () => set({ key: await api.keyStatus() }),
   refreshSpending: async () => set({ spending: await api.spending() }),
   upsertJob: (j) => {
-    const { projectId } = get();
+    const { projectId, threadId, threads } = get();
+    if (j.thread_id && !threads.some((t) => t.id === j.thread_id && t.job_count > 0)) {
+      // First job of a conversation: refresh so it gets its title and moves to the top.
+      void get().loadThreads();
+    }
     if (projectId && j.project_id !== projectId) return;
+    if ((j.thread_id ?? null) !== threadId) return;
     set((s) => ({ jobs: { ...s.jobs, [j.id]: j } }));
     if (j.status === "completed" || j.status === "failed" || j.status === "canceled" || j.status === "nsfw") {
       void get().refreshSpending();

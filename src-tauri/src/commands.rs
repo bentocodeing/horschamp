@@ -1,6 +1,6 @@
 //! Tauri commands. Nothing here returns a secret; the webview only ever sees a masked hint.
 
-use crate::db::{self, Brief, BriefMessage, Job, LibraryFilter, LibraryItem, Project};
+use crate::db::{self, Brief, BriefMessage, Job, LibraryFilter, LibraryItem, Project, Thread};
 use crate::director::{self, DirectorStatus, Shot};
 use crate::error::{AppError, AppResult};
 use crate::hf::{self, HfClient};
@@ -192,6 +192,40 @@ pub async fn job_submit(s: S<'_>, req: JobRequest, confirmed_usd: Option<f64>) -
 #[tauri::command]
 pub fn jobs_list(s: S, project_id: Option<String>, limit: Option<i64>) -> AppResult<Vec<Job>> {
     s.db.jobs(project_id.as_deref(), limit.unwrap_or(100))
+}
+
+#[tauri::command]
+pub fn thread_jobs(
+    s: S,
+    thread_id: Option<String>,
+    project_id: Option<String>,
+    limit: Option<i64>,
+) -> AppResult<Vec<Job>> {
+    s.db.thread_jobs(
+        thread_id.as_deref(),
+        project_id.as_deref(),
+        limit.unwrap_or(200),
+    )
+}
+
+#[tauri::command]
+pub fn threads_list(s: S, project_id: Option<String>) -> AppResult<Vec<Thread>> {
+    s.db.threads(project_id.as_deref())
+}
+
+#[tauri::command]
+pub fn thread_create(s: S, project_id: Option<String>) -> AppResult<Thread> {
+    s.db.create_thread(project_id.as_deref())
+}
+
+#[tauri::command]
+pub fn thread_rename(s: S, id: String, title: String) -> AppResult<()> {
+    s.db.rename_thread(&id, title.trim())
+}
+
+#[tauri::command]
+pub fn thread_delete(s: S, id: String) -> AppResult<()> {
+    s.db.delete_thread(&id)
 }
 
 #[tauri::command]

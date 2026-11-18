@@ -36,6 +36,8 @@ pub struct JobRequest {
     pub shot_index: Option<i64>,
     #[serde(default)]
     pub retry_of: Option<String>,
+    #[serde(default)]
+    pub thread_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -360,6 +362,7 @@ impl JobManager {
             created_at: t.clone(),
             updated_at: t,
             finished_at: None,
+            thread_id: req.thread_id.clone(),
             assets: vec![],
         };
         self.db.insert_job(&job)?;
@@ -429,6 +432,7 @@ impl JobManager {
                 brief_id: None,
                 shot_index: None,
                 retry_of: None,
+                thread_id: None,
             };
             let (body, atts) = self.build_body(&client, &req).await?;
             self.db.set_job_attachments(id, &atts, &job.params)?;
@@ -693,6 +697,7 @@ mod tests {
             brief_id: None,
             shot_index: None,
             retry_of: None,
+            thread_id: None,
         }
     }
 
