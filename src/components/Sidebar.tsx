@@ -46,7 +46,7 @@ export function Sidebar() {
     setAdding(false);
   };
 
-  const spent = spending ? (spending.usage_spent_usd ?? spending.local_spent_usd) : 0;
+  const spent = spending ? Math.max(spending.usage_spent_usd ?? 0, spending.local_spent_usd) : 0;
   const start = spending?.starting_balance_usd ?? null;
   const pct = start ? Math.max(0, Math.min(100, ((start - spent) / start) * 100)) : 0;
 
@@ -141,6 +141,7 @@ export function Sidebar() {
         <span className="text-[11px] text-text-2">
           {start !== null ? `${usd(spent)} spent` : "spent · set your balance"}
           {spending?.usage_synced_at ? " · synced" : " · local log"}
+          {spending && spending.unpriced_jobs > 0 && ` · ${spending.unpriced_jobs} unpriced`}
         </span>
       </button>
     </nav>

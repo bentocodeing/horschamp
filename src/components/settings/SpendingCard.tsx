@@ -272,6 +272,22 @@ export function SpendingCard() {
     }
   };
 
+  const [repricing, setRepricing] = useState(false);
+  const reprice = async () => {
+    setRepricing(true);
+    try {
+      const r = await api.spendingReprice();
+      if (r.unknown > 0)
+        toast.error(`${r.unknown} job${r.unknown === 1 ? "" : "s"} still unpriced: ${r.error}`);
+      else toast.success(`Priced ${r.priced} job${r.priced === 1 ? "" : "s"}`);
+      await refreshSpending();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setRepricing(false);
+    }
+  };
+
   const exportCsv = async () => {
     const day = new Date().toISOString().slice(0, 10);
     const path = await save({
@@ -317,6 +333,18 @@ export function SpendingCard() {
           </Button>
         </div>
       </div>
+      {s && s.unpriced_jobs > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-fill-1 px-3 py-2 text-xs text-text-2">
+          <span>
+            {s.unpriced_jobs} completed job{s.unpriced_jobs === 1 ? " has" : "s have"} no price yet and count
+            as $0, so the spent total is too low.
+          </span>
+          <Button size="sm" variant="ghost" onClick={reprice} disabled={repricing}>
+            {repricing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            Estimate now
+          </Button>
+        </div>
+      )}
       {syncError && <div className="rounded-lg bg-fill-1 px-3 py-2 text-xs text-text-2">{syncError}</div>}
       <div className="grid grid-cols-4 gap-3">
         <BalanceStat

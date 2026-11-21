@@ -288,7 +288,9 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
     remaining_est_usd: Number(settings.starting_balance_usd) - 41.37,
     threshold_usd: 0,
     director_spent_usd: 0,
+    unpriced_jobs: 0,
   }),
+  spending_reprice: () => ({ priced: 0, unknown: 0, error: null }),
   director_status: () => ({
     cli_installed: true,
     cli_path: "/usr/local/bin/claude",

@@ -369,6 +369,7 @@ pub struct Spending {
     remaining_est_usd: Option<f64>,
     threshold_usd: f64,
     director_spent_usd: f64,
+    unpriced_jobs: i64,
 }
 
 #[tauri::command]
@@ -380,9 +381,10 @@ pub fn spending_summary(s: S) -> AppResult<Spending> {
     let local = s.db.local_spend(since.as_deref())?;
     let usage = s.db.last_usage_sync()?;
     let usage_spent = usage.as_ref().map(|u| u.3);
-    let spent = usage_spent
-        .unwrap_or(local)
-        .max(local.min(usage_spent.unwrap_or(local)));
+    // A usage sync can be stale or empty (the endpoint may lag or be Enterprise-only),
+    // so it never hides what the local log already counts.
+    let spent = usage_spent.map_or(local, |u| u.max(local));
+    let unpriced = s.db.unpriced_jobs(since.as_deref())?;
     let director: f64 =
         s.db.briefs(None)?
             .iter()
@@ -398,7 +400,22 @@ pub fn spending_summary(s: S) -> AppResult<Spending> {
         remaining_est_usd: start.map(|b: f64| b - spent),
         threshold_usd: s.jobs.threshold(),
         director_spent_usd: director,
+        unpriced_jobs: unpriced,
     })
+}
+
+#[derive(Serialize)]
+pub struct Reprice {
+    priced: usize,
+    unknown: usize,
+    error: Option<String>,
+}
+
+/// Ask `/estimate` for the price of completed jobs that have none recorded.
+#[tauri::command]
+pub async fn spending_reprice(s: S<'_>) -> AppResult<Reprice> {
+    let (priced, unknown, error) = s.jobs.reprice_unknown().await?;
+    Ok(Reprice { priced, unknown, error })
 }
 
 /// Write every job with its estimate and charged amount to a CSV file the user picked.

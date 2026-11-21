@@ -97,15 +97,25 @@ export const useStore = create<State>((set, get) => ({
       .then(() => get().loadJobs());
   },
   init: async () => {
-    await Promise.all([
+    // One failing step (e.g. the keychain refusing access) must not stop the others,
+    // or Generate loses its conversations and composer.
+    const results = await Promise.allSettled([
       get().loadModels(),
       get().loadProjects(),
       get().refreshKey(),
       get().refreshSpending(),
+      get()
+        .loadThreads()
+        .then(() => set({ threadId: get().threads[0]?.id ?? null }))
+        .then(() => get().loadJobs()),
     ]);
-    await get().loadThreads();
-    set({ threadId: get().threads[0]?.id ?? null });
-    await get().loadJobs();
+    // Price finished jobs whose quote had no estimate, so the balance stays honest.
+    void api
+      .spendingReprice()
+      .then((r) => (r.priced > 0 ? get().refreshSpending() : undefined))
+      .catch(() => {});
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failed) throw failed.reason;
   },
   loadProjects: async () => set({ projects: await api.projects() }),
   loadModels: async () => {

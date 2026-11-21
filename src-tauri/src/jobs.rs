@@ -371,6 +371,53 @@ impl JobManager {
         Ok(job)
     }
 
+    /// Price a stored job with `/estimate`, reusing its uploaded media. Used when the quote had
+    /// no estimate, so a completed job still counts toward spending.
+    async fn estimate_job(&self, client: &HfClient, job: &Job) -> AppResult<f64> {
+        let req = JobRequest {
+            model_id: job.model_id.clone(),
+            params: job.params.as_object().cloned().unwrap_or_default(),
+            attachments: job.attachments.clone(),
+            project_id: None,
+            source: None,
+            brief_id: None,
+            shot_index: None,
+            retry_of: None,
+            thread_id: None,
+        };
+        let (body, _) = self.build_body(client, &req).await?;
+        let v = self.estimate_cached(client, &job.model_id, &body).await;
+        if let Err(e) = &v {
+            log::warn!("estimate for completed job {} failed: {e}", job.id);
+        }
+        v
+    }
+
+    /// Estimate every completed job that has no recorded cost. Returns (priced, still unknown,
+    /// last error).
+    pub async fn reprice_unknown(&self) -> AppResult<(usize, usize, Option<String>)> {
+        let jobs = self.db.completed_jobs_without_cost()?;
+        if jobs.is_empty() {
+            return Ok((0, 0, None));
+        }
+        let client = self.client()?;
+        let (mut ok, mut left, mut last) = (0, 0, None);
+        for j in &jobs {
+            match self.estimate_job(&client, j).await {
+                Ok(v) => {
+                    self.db.set_job_cost(&j.id, Some(v))?;
+                    ok += 1;
+                }
+                Err(e @ (AppError::Unauthorized | AppError::NoKey)) => return Err(e),
+                Err(e) => {
+                    left += 1;
+                    last = Some(e.to_string());
+                }
+            }
+        }
+        Ok((ok, left, last))
+    }
+
     /// Restart runners for jobs that were active when the app closed.
     pub fn resume_all(self: &Arc<Self>) -> AppResult<usize> {
         let jobs = self.db.active_jobs()?;
@@ -496,7 +543,11 @@ impl JobManager {
                     if s.status == RemoteStatus::Completed {
                         self.set(id, "downloading", None)?;
                         self.download_outputs(&client, id, &s.outputs).await?;
-                        self.db.set_job_cost(id, job.est_usd)?;
+                        let cost = match job.est_usd {
+                            Some(v) => Some(v),
+                            None => self.estimate_job(&client, &job).await.ok(),
+                        };
+                        self.db.set_job_cost(id, cost)?;
                         self.set(id, "completed", None)?;
                         return Ok(());
                     }

@@ -661,6 +661,25 @@ impl Db {
         )?)
     }
 
+    /// Completed jobs whose cost was never recorded (no estimate at submit time).
+    pub fn completed_jobs_without_cost(&self) -> AppResult<Vec<Job>> {
+        let c = self.c();
+        let mut st = c.prepare(&format!(
+            "SELECT {JOB_COLS} FROM jobs WHERE status='completed' AND cost_usd IS NULL AND est_usd IS NULL"
+        ))?;
+        let rows = st.query_map([], job_from_row)?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Number of completed jobs since `since` that count as $0 because their price is unknown.
+    pub fn unpriced_jobs(&self, since: Option<&str>) -> AppResult<i64> {
+        Ok(self.c().query_row(
+            "SELECT COUNT(*) FROM jobs WHERE status='completed' AND cost_usd IS NULL AND est_usd IS NULL AND (?1 IS NULL OR finished_at >= ?1)",
+            [since],
+            |r| r.get(0),
+        )?)
+    }
+
     pub fn record_usage_sync(
         &self,
         start: &str,

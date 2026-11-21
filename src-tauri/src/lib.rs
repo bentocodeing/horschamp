@@ -201,6 +201,7 @@ pub fn run() {
             commands::settings_get,
             commands::settings_set,
             commands::spending_summary,
+            commands::spending_reprice,
             commands::usage_sync,
             commands::spending_export_csv,
             commands::backups_reveal,

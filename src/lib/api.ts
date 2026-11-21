@@ -214,6 +214,13 @@ export interface Spending {
   remaining_est_usd: number | null;
   threshold_usd: number;
   director_spent_usd: number;
+  /** Completed jobs counted as $0 because no price could be estimated. */
+  unpriced_jobs: number;
+}
+export interface Reprice {
+  priced: number;
+  unknown: number;
+  error: string | null;
 }
 export type Settings = Record<string, string>;
 
@@ -263,6 +270,8 @@ export const api = {
   settings: () => invoke<Settings>("settings_get"),
   settingSet: (key: string, value: string) => invoke<void>("settings_set", { key, value }),
   spending: () => invoke<Spending>("spending_summary"),
+  /** Estimates completed jobs that have no recorded price. */
+  spendingReprice: () => invoke<Reprice>("spending_reprice"),
   usageSync: () => invoke<{ total_usd: number; by_model: Record<string, number> }>("usage_sync"),
   /** Writes all jobs to a CSV file; returns how many were written. */
   spendingExportCsv: (outPath: string) => invoke<number>("spending_export_csv", { outPath }),
